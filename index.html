@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="description" content="미적분Ⅱ의 삼각함수·합성함수 미분을 활용한 다관절 역기구학 경사하강법 시뮬레이터" />
+  <title>TEMA IK Lab — Gradient Descent</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brandmark" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><path d="M8 30L17 14L27 20L34 8" stroke="currentColor" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="30" r="3.4" fill="currentColor"/><circle cx="17" cy="14" r="3.4" fill="currentColor"/><circle cx="27" cy="20" r="3.4" fill="currentColor"/><circle cx="34" cy="8" r="3.4" fill="currentColor"/></svg></div>
+      <div class="brandname"><strong>TEMA <span>IK LAB</span></strong><small>INVERSE KINEMATICS / VISUAL LAB</small></div>
+      <div class="header-right"><span class="version">2D · GRADIENT DESCENT</span><a href="#theory" class="theory-link">수학적 원리 <span>↗</span></a></div>
+    </header>
+
+    <main>
+      <div class="page-heading">
+        <div><div class="eyebrow">미적분Ⅱ · 프로그래밍 탐구</div><h1>미분으로 움직이는 로봇 팔<span class="dot">.</span></h1><p>목표점을 이동하고, 관절마다 오차의 미분값이 어떻게 변하는지 확인해 보세요.</p></div>
+        <div class="heading-meta"><span class="status-dot"></span><span id="topStatus">시뮬레이션 실행 중</span></div>
+      </div>
+
+      <div class="workspace">
+        <section class="stage-card" aria-label="로봇 팔 시뮬레이션">
+          <div class="stage-header"><div class="stage-title"><span class="stage-icon">◎</span><strong>시뮬레이션</strong><span class="stage-label">2D WORKSPACE</span></div><div class="stage-coordinates" id="targetCoords">TARGET X 2.40 · Y 1.30</div></div>
+          <div class="canvas-wrap" id="canvasWrap"><canvas id="armCanvas" aria-label="관절 로봇 팔과 목표점. 캔버스를 드래그하여 목표 위치를 변경할 수 있습니다."></canvas><div class="canvas-hint"><span class="drag-icon">✣</span><span>클릭 또는 드래그하여 목표 이동</span></div><div class="canvas-counter"><span id="canvasJointCount">04</span><span>JOINTS</span></div></div>
+          <div class="stage-toolbar">
+            <div class="primary-actions"><button id="playBtn" class="button primary" type="button"><span id="playSymbol" aria-hidden="true">Ⅱ</span><span id="playLabel">일시정지</span></button><button id="stepBtn" class="button neutral" type="button"><span aria-hidden="true">↷</span> 1회 계산</button></div>
+            <div class="secondary-actions"><button id="resetBtn" class="button ghost" type="button">↺ 초기 자세</button><button id="randomBtn" class="button ghost" type="button">⤨ 무작위 자세</button></div>
+          </div>
+        </section>
+
+        <aside class="sidebar" aria-label="실험 설정 및 결과">
+          <div class="stats-grid"><div class="stat"><div class="stat-label">목표까지의 거리 <span>d</span></div><div class="stat-value" id="distanceValue">—</div></div><div class="stat"><div class="stat-label">제곱 오차 <span>E</span></div><div class="stat-value accent" id="errorValue">—</div></div></div>
+          <section class="side-card control-card"><div class="section-head"><h2>실험 설정</h2><span class="subheading">PARAMETERS</span></div>
+            <div class="setting"><div class="setting-head"><label for="jointCount">관절 개수</label><output id="jointCountValue" for="jointCount">4</output></div><input type="range" id="jointCount" min="2" max="12" step="1" value="4" /><div class="range-ends"><span>2</span><span>12</span></div></div>
+            <div class="setting"><div class="setting-head"><label for="learningSlider">학습률 <span class="math-small">α</span></label><output id="learningValue" for="learningSlider">0.010000</output></div><input type="range" id="learningSlider" min="0" max="1000" step="1" value="500" /><div class="range-ends"><span>작게 · 안정적</span><span>크게 · 빠르게</span></div></div>
+            <div class="setting last"><div class="setting-head"><label for="speedSlider">프레임당 반복 횟수</label><output id="speedValue" for="speedSlider">5</output></div><input type="range" id="speedSlider" min="1" max="50" step="1" value="5" /><div class="range-ends"><span>1</span><span>50</span></div></div>
+          </section>
+          <section class="side-card joint-card"><div class="section-head"><h2>관절별 미분값</h2><span class="subheading">dE / dθ</span></div><div class="joint-table-heading"><span>관절</span><span>각도</span><span>미분값 D</span></div><div id="jointRows" class="joint-rows"></div></section>
+          <section class="side-card run-card"><div class="run-metric"><div><span class="run-label">누적 갱신 횟수</span><strong id="iterationValue">0</strong></div><button id="exportBtn" class="text-button" type="button" title="반복 기록을 CSV 파일로 저장">CSV 저장 ↗</button></div><div id="runNote" class="run-note">미분값에 따라 각도를 동시에 갱신합니다.</div></section>
+        </aside>
+      </div>
+
+      <section class="graph-card"><div class="section-head"><div><h2>오차 변화 그래프</h2><p>반복 계산에 따른 거리 제곱 오차의 변화</p></div><div class="graph-head-right"><span class="graph-legend"><i></i>log₁₀(E)</span><button id="clearGraphBtn" type="button" class="text-button">기록 초기화</button></div></div><div class="graph-wrap"><canvas id="graphCanvas" aria-label="최근 반복의 오차 변화 그래프"></canvas></div><div class="graph-footer"><span>최근 최대 250개 기록</span><span>반복 횟수 →</span></div></section>
+
+      <section class="theory" id="theory"><div class="theory-head"><div class="eyebrow">MATHEMATICS</div><h2>이 프로그램에 사용된 수학</h2><p>raylib C++ 코드의 계산 과정을 JavaScript로 옮겼으며, 기본 경사하강법만 사용합니다.</p></div><div class="formula-grid"><article class="formula-card"><div class="formula-num">01 / FORWARD KINEMATICS</div><h3>순기구학</h3><div class="formula">x = Σ cos(θ₁ + ⋯ + θₖ)<br/>y = Σ sin(θ₁ + ⋯ + θₖ)</div><p>각 막대의 회전 방향에 따라 수평·수직 성분을 합쳐 끝점 좌표를 계산합니다.</p></article><article class="formula-card"><div class="formula-num">02 / ERROR FUNCTION</div><h3>오차 함수</h3><div class="formula">E = (x − a)² + (y − b)²</div><p>목표점 (a, b)과 끝점 (x, y)의 거리 제곱을 최소화합니다.</p></article><article class="formula-card"><div class="formula-num">03 / GRADIENT DESCENT</div><h3>경사하강법</h3><div class="formula">Dᵢ = dE / dθᵢ<br/>θᵢ(new) = θᵢ − αDᵢ</div><p>합성함수 미분으로 구한 관절별 변화율을 이용해 모든 관절 각도를 동시에 갱신합니다.</p></article></div><p class="theory-note">※ 모든 각도는 라디안으로 계산합니다. 적응형 학습률, 정지점 탈출, 관절 회전량 패널티 등 추가 보정 알고리즘은 사용하지 않습니다. 학습률이 크면 오차가 증가할 수 있으며, 미분값이 0인 자세에서 멈출 수 있습니다.</p></section>
+    </main>
+    <footer>© TEMA IK LAB <span>·</span> C++ raylib → HTML Canvas / JavaScript <span>·</span> Made for a calculus exploration</footer>
+  </div>
+</body>
+</html>
